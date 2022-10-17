@@ -176,5 +176,17 @@ According to this graph, this patient's activity level is typically low at 11 p.
 ## load data
 ```{r}
 data("ny_noaa")
+ny_noaa
 ```
+
+##Answer Questions
+### Problem 3.1 
+A short description of the dataset: 
+
+The raw dataset `ny_noaa` contains 2,595,176 `r nrow(ny_noaa)` observations with 7 `r ncol(ny_noaa)` variables, which include `id`, `date`, `prcp`, `snow`, `snwd`, `tmax` and `tmin`. 
+The following are important variables: id` means weather station ID, while `date` represents date of observation. `prcp` means precipitation (tenths of mm), `snow` means snowfall (mm) and `snwd` means snow depth (mm). `tmax` and `tmin` each represent the maximum temperature and minimum temperature(tenths of degrees C) for the day. 
+Missing data appear in 5 variables: 'prcp', 'snow' , 'snwd',  'tmax' and '
+tmin'. The missing data in the 'prcp', 'snow' , 'snwd' is be an issue.
+
+
 
