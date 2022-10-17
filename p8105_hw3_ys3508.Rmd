@@ -1,226 +1,107 @@
 ---
-title: "Data Tidying"
+title: "p8105_hw3_ys3508"
 output: github_document
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(collapse = TRUE, message = FALSE)
-```
 
+library(tidyverse)
+library(ggridges)
+library(patchwork)
+
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+```
+# Problem 1
 ## load package
 ```{r}
-library(tidyverse) 
-library(readxl)
+library(p8105.datasets)
+
 ```
 
+## Read in the data
 
-## Problem 1
-### Load/Clean Data
 ```{r}
-nyc_mta = 
-  read_csv("./data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv", 
-    col_types = cols(Route8 = "c", Route9 = "c", Route10 = "c", Route11 = "c")) %>%
-  janitor::clean_names() %>%
-  select(line, station_name, station_latitude, station_longitude, route1:route11, entry, vending, entrance_type, ada) %>% 
-  rename(ADA_compliance = ada)%>% 
-  mutate(entry = ifelse(entry == "YES", TRUE, FALSE))
+data("instacart")
 
+instacart = 
+  instacart %>% 
+  as_tibble(instacart)
 ```
-
-These data are not "tidy" as they now stand; route number and route should both be variables. That is, we would need to change "route" variables from wide to long format in order to have a clean dataset. 
 ### Answer Questions
+#### Problem 1.1
+Aisles_id
 ```{r}
-nyc_mta %>% 
-  select(station_name, line) %>% 
-  distinct
-
-nyc_mta %>% 
-  filter(ADA_compliance == TRUE) %>% 
-  select(station_name, line) %>% 
-  distinct
+instacart %>%
+  group_by(aisle) %>%
+  summarise(n_aisles = n()) %>%
+  arrange(desc(n_aisles))
 ```
 
-There are 465 distinct stations, and 84 of them are ADA compliant.
+134 aisles are there, and fresh vegetables and fresh fruits are the most items ordered from.
 
+#### Problem 1.2
+Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.
 ```{r}
-nyc_mta %>% 
-  filter(vending == "NO") %>% 
-  pull(entry) %>% 
-  mean
-```
-
-```{r}
-nyc_mta %>% 
-  pivot_longer(
-    route1:route11,
-    names_to = "route_num",
-    values_to = "route") %>% 
-  filter(route == "A") %>% 
-  select(station_name, line) %>% 
-  distinct
-
-nyc_mta %>% 
-  pivot_longer(
-    route1:route11,
-    names_to = "route_num",
-    values_to = "route") %>% 
-  filter(route == "A", ADA_compliance == TRUE) %>% 
-  select(station_name, line) %>% 
-  distinct
-```
-
-## Problem 2
-### Load/Clean Data
-
-```{r}
-mr_trash_wheel = 
-  readxl::read_excel("./data/Trash Wheel Collection Data.xlsx",
-             sheet = "Mr. Trash Wheel", range = "A2:N550") %>%
-    janitor::clean_names() %>%
-  filter(dumpster >= 1) %>% 
-  mutate(sports_balls = as.integer(sports_balls)) %>%
-  mutate(trash_wheel_source = "Mr.")
-
-mr_trash_wheel
-```
-
-```{r}
-pro_trash_wheel = 
-  readxl::read_excel("./data/Trash Wheel Collection Data.xlsx",
-             sheet = "Professor Trash Wheel", range = "A2:M97") %>%
-    janitor::clean_names() %>%
-  filter(dumpster >= 1) %>%
-  mutate(trash_wheel_source = "Professor") %>% 
-  mutate(year = as.character(year))
-
-pro_trash_wheel
-```
-
-### Join Two Dataset
-```{r}
-trash_wheel_data = 
-  full_join(mr_trash_wheel, pro_trash_wheel, by  = c('dumpster','month','year','date','weight_tons','volume_cubic_yards','plastic_bottles','polystyrene','cigarette_butts','glass_bottles', 'grocery_bags', 'chip_bags', 'homes_powered', 'trash_wheel_source'))
-
-trash_wheel_data
+bar_aisle <- instacart %>% 
+  count(aisle) %>%
+  filter(n > 10000) %>% # limiting this to aisles with more than 10000 items ordered
+  mutate(aisle = fct_reorder(aisle, n)) %>% 
+  ggplot(aes(x = aisle, y = n)) +
+    geom_bar(stat='identity') +
+    xlab("Aisle")+
+    ylab("The number of items ordered")+
+  ggtitle("The number of items ordered in each aisle (aisle > 10000)") +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1))
+bar_aisle
 
 ```
 
-### Answer Questions
 
-In the resulting dataset, there are 641 observations. As an example, the variable "dumpster" has 641 641 observations, of which 547 are from the "Mr. Trash Wheel" dataset and the remaining 94 from the "Professor Trash Wheel" dataset.
-
-```{r}
-trash_wheel_data %>% 
-  select(dumpster, trash_wheel_source) %>% 
-  distinct()
-
-trash_wheel_data %>% 
-  filter(trash_wheel_source == "Mr.") %>% 
-  select(dumpster, trash_wheel_source) %>% 
-  distinct()
-
-trash_wheel_data %>% 
-  filter(trash_wheel_source == "Professor") %>% 
-  select(dumpster, trash_wheel_source) %>% 
-  distinct()
-```
-The total weight of trash collected by Professor Trash Wheel was  190.12 tons.
+#### Problem 1.3 
+Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.
 
 ```{r}
-trash_wheel_data %>% 
-  filter(trash_wheel_source == "Professor") %>% 
-  summarise(total_weight = sum(weight_tons, na.rm = TRUE))
-
-```
-
-The total number of sports balls collected by Mr. Trash Wheel in 2020 was 856.
-
-```{r}
-trash_wheel_data %>% 
-  filter(trash_wheel_source == "Mr." & year == "2020") %>% 
-  summarise(total_sports_balls = sum(sports_balls, na.rm = TRUE))
-
-```
-
-## Problem 3
-### Load/Clean Data
-
-```{r}
-pols = 
-  read_csv("/Users/ovo/Desktop/FALL/Data Science/Assignments/p8105_hw2_ys3508/data/p8105_hw2_ajg2202/data/fivethirtyeight_datasets/pols_month.csv") %>%
-  janitor::clean_names() %>%
-  separate(col = mon, into = c('year', 'month', 'day'), sep = '-') %>% 
-  mutate(month = ifelse(month == "01", "jan", 
-                        ifelse(month == "02", "feb", 
-                               ifelse(month == "03", "mar", 
-                                      ifelse(month == "04", "apr", 
-                                             ifelse(month == "05", "may", 
-                                                    ifelse(month == "06", "jun", 
-                                                           ifelse(month == "07", "jul", 
-                                                                  ifelse(month == "08", "aug",
-                                                                         ifelse(month == "09", "sep", 
-                                                                                ifelse(month == "10", "oct", 
-                                                                                       ifelse(month == "11", "nov", "dec")))))))))))) %>%  
-  mutate(president = ifelse(prez_dem == "1", "Democratic", "Republican")) %>% 
-  select(-prez_dem, -prez_gop, -day)
-
-pols
-```
-
-```{r}
-snp = 
-  read_csv("/Users/ovo/Desktop/FALL/Data Science/Assignments/p8105_hw2_ys3508/data/p8105_hw2_ajg2202/data/fivethirtyeight_datasets/snp.csv") %>%
-  janitor::clean_names() %>%
-  separate(col = date, into = c('month', 'day', 'year'), sep = '/') %>% 
-  mutate(month = ifelse(month == "01", "jan", 
-                        ifelse(month == "02", "feb", 
-                               ifelse(month == "03", "mar", 
-                                      ifelse(month == "04", "apr", 
-                                             ifelse(month == "05", "may", 
-                                                    ifelse(month == "06", "jun", 
-                                                           ifelse(month == "07", "jul", 
-                                                                  ifelse(month == "08", "aug",
-                                                                         ifelse(month == "09", "sep", 
-                                                                                ifelse(month == "10", "oct", 
-                                                                                       ifelse(month == "11", "nov", "dec")))))))))))) %>% 
-  mutate(year = as.numeric(year)) %>% 
-  mutate(year = ifelse(year > 90, year  + 1900, year  + 2000)) %>%
-  mutate(year = as.character(year)) %>% 
-  select( -day) %>% 
-  select("year", "month", everything())
- 
-
-snp
+instacart %>% 
+  filter(aisle == "baking ingredients" | aisle ==  "dog food care" | aisle ==  "packaged vegetables fruits") %>% 
+  group_by(aisle) %>% 
+  count(product_name) %>% 
+  mutate(product_ranking = min_rank(desc(n))) %>% # rank from the most popular to less polular
+  filter(product_ranking < 4) %>%  # list top 3 in each aisle
+  arrange(desc(n)) %>%  # order the table by n
+  knitr::kable() # making the table
 ```
 
 
+#### Problem 1.4 
+Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers (i.e. produce a 2 x 7 table).
+
 ```{r}
-unemployment = 
-  read_csv("/Users/ovo/Desktop/FALL/Data Science/Assignments/p8105_hw2_ys3508/data/p8105_hw2_ajg2202/data/fivethirtyeight_datasets/unemployment.csv") %>%
-  janitor::clean_names() %>%
-  pivot_longer(
-    jan:dec,
-    names_to = "month",
-    values_to = "unemployment") %>%
-  mutate(year = as.character(year)) %>% 
-  select("year", "month", everything())
- 
+instacart %>% 
+  filter(product_name == "Pink Lady Apples" | product_name == "Coffee Ice Cream") %>% 
+  group_by(product_name, order_dow) %>%
+  summarize(mean_hour = mean(order_hour_of_day)) %>%
+  spread(key = order_dow, value = mean_hour) %>%
+  knitr::kable(digits = 2)
 
-unemployment
+
 ```
-
-### merge dataset
-```{r}
-# merging snp into pols
-
-snp_pols = merge(pols, snp, by=c("year","month"),all.x=TRUE)
-snp_pols
-# merging unemployment into the result
-total = left_join(snp_pols, unemployment, by=c("year","month"))
-total
-```
-
-Snp and pols are being merged in the dataset 'snp pols'. This "snp pols" has 10 variables and 1038 observations. The years 1947 through 2015 are included. Important variables include "month" and "year," as well as "gov gop," "sen gop," "rep gop," "gov dem," "sen dem," "rep dem," "president," and "close."
-
-We obtained the dataset "total" with 1038 observations and 11 variables after combining unemployment into the outcome. also ranges from 1947 to 2015. Prior variables included the variable "unemployment."
-
 
