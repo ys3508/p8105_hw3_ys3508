@@ -176,17 +176,68 @@ According to this graph, this patient's activity level is typically low at 11 p.
 ## load data
 ```{r}
 data("ny_noaa")
-ny_noaa
+
 ```
 
 ##Answer Questions
 ### Problem 3.1 
 A short description of the dataset: 
+```{r}
+ny_noaa
+```
 
 The raw dataset `ny_noaa` contains 2,595,176 `r nrow(ny_noaa)` observations with 7 `r ncol(ny_noaa)` variables, which include `id`, `date`, `prcp`, `snow`, `snwd`, `tmax` and `tmin`. 
 The following are important variables: id` means weather station ID, while `date` represents date of observation. `prcp` means precipitation (tenths of mm), `snow` means snowfall (mm) and `snwd` means snow depth (mm). `tmax` and `tmin` each represent the maximum temperature and minimum temperature(tenths of degrees C) for the day. 
 Missing data appear in 5 variables: 'prcp', 'snow' , 'snwd',  'tmax' and '
 tmin'. The missing data in the 'prcp', 'snow' , 'snwd' is be an issue.
 
+### Problem 3.2
+Do some data cleaning. Create separate variables for year, month, and day. Ensure observations for temperature, precipitation, and snowfall are given in reasonable units. For snowfall, what are the most commonly observed values? Why?
+```{r}
+ny_noaa <- ny_noaa %>%
+  janitor::clean_names() %>% 
+  drop_na(prcp, snow, snwd, tmax, tmin) %>% #drop na in the dataset
+  separate(
+    date, 
+    into = c("year", "month", "day"), 
+    sep = "-", 
+    convert = TRUE) %>% 
+  mutate(
+    tmax = as.numeric(tmax),
+    tmin = as.numeric(tmin),
+    prcp = as.numeric(prcp)) %>% 
+  mutate(
+    tmax = tmax / 10,
+    tmin = tmin / 10,
+    prcp = prcp / 10) #report the data as Celsius;
 
+  
+ny_noaa %>%
+  group_by(snow) %>% 
+  summarise(n_snow = n()) %>%
+  arrange(desc(n_snow))
+```
 
+After removing all the NAs, the most commonly observed values in snow are 0, 25, and 13. Because in most time of the year, there is no snow, 0 is reasonable.
+
+### Problem 3.3
+Make a two-panel plot showing the average max temperature in January and in July in each station across years. Is there any observable / interpretable structure? Any outliers?
+```{r}
+avgtmax <- ny_noaa %>%
+  filter(month == "1" | month == "7" ) %>%
+  group_by(id, year, month) %>%
+  summarise(avg_tmax = mean(tmax, na.rm = TRUE)) %>% 
+  ggplot(aes(x = year, y = avg_tmax, color = month)) + 
+  geom_point() +
+  geom_smooth(methd = lowess, span = .3) +
+  facet_grid(~ month) +
+  labs(
+  title = "The average max temperature in January and in July in each station across years",
+  x = "Year",
+  y ="The average max temperature", 
+  labels = scales::comma) +
+    theme(axis.text.x=element_text(angle=45, hjust=.5, vjust=0.5)) 
+avgtmax
+```
+
+The plot shows that the average temperature in July ranges between -20 and 10 degrees Celsius and in July ranges between 20 and 30 degrees Celsius, implying that the average maximum temperature in July is significantly higher than it is in January. The lines in this image are roughly parallel. However, there are some outliers, such as the January 1982 point and the July 1988 point.
